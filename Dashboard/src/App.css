@@ -1,0 +1,31 @@
+:root {
+  /* 🌑 Base Theme */
+  --color-bg: #121212;
+  --color-surface: #1E1E2F;
+  --color-card: #24243C;
+  --color-light: #fef0ff;
+
+  /* 🎨 Vibrant Functional Colors */
+  --color-primary-accent: #00CFFF;
+  --color-success: #32D74B;
+  --color-warning: #FFB200;
+  --color-critical: #FF4D5A;
+  --color-info: #1DE9B6;
+  --color-secondary-accent: #B388FF;
+
+  /* 📊 Graph Colors */
+  --color-graph-1: #FF4081;
+  --color-graph-2: #00BFA6;
+  --color-graph-3: #FFE600;
+
+  /* 🔤 Text & UI */
+  --color-text-primary: #E0E0E0;
+  --color-text-secondary: #9E9E9E;
+  --color-divider: #2A2A3C;
+  --color-hover: #33334D;
+}
+
+
+body{
+    background-color: var(--color-bg);
+}
