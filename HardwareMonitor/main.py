@@ -20,10 +20,10 @@ BATCH_SIZE = int(os.getenv("BATCH_SIZE",10)) # 10 records
 
 app = FastAPI()
 
-LIBRE_HARDWARE_MONITORING_ENDPOINT = "http://172.23.192.1:8085/data.json"
+LIBRE_HARDWARE_MONITORING_ENDPOINT = "http://localhost:8085/data.json"
 
-DEVICE_NAME="ADITYA-OMEN"
-MODULES_TO_MONITOR=["Intel Core i7-14650HX"]
+DEVICE_NAME="ATREYA-SLOWLORI"
+MODULES_TO_MONITOR=["AMD Ryzen 7 5800H with Radeon Graphics"]
 
 # Define Gauges
 cpu_temp_gauge = Gauge("cpu_temperature_celsius", "CPU Temperature", ["core"])
@@ -33,6 +33,40 @@ cpu_max_temp_gauge = Gauge("cpu_max_temperature_celsius", "CPU Temperature (Max)
 cpu_voltage_guage = Gauge("cpu_voltage_volt", "CPU Voltage", ["core"])
 cpu_powers_guage = Gauge("cpu_powers_watt", "CPU Power", ["core"])
 cpu_load_gauge = Gauge("cpu_load_percent", "CPU Load", ["core"])
+
+def classify_snapshot(snapshot):
+    reasons = []
+    status = "healthy"
+
+    temp = snapshot["temperature"].get("Core (Tctl/Tdie)", {}).get("value", 0)
+    cpu_load = snapshot["load"].get("CPU Total", 0)
+    voltage = snapshot["voltage"].get("Core (SVI2 TFN)", 0)
+    power = snapshot["power"].get("Package", 0)
+
+    # Classification rules
+    if temp > 90:
+        reasons.append(f"Temperature too high ({temp}°C > 90°C)")
+    elif temp > 80:
+        reasons.append(f"Temperature elevated ({temp}°C > 80°C)")
+
+    if cpu_load > 80:
+        reasons.append(f"CPU load is high ({cpu_load}% > 80%)")
+
+    if voltage > 1.6:
+        reasons.append(f"Voltage too high ({voltage}V > 1.6V)")
+
+    if power > 80:
+        reasons.append(f"Power draw is critical ({power}W > 80W)")
+    elif power > 50:
+        reasons.append(f"Power draw is elevated ({power}W > 50W)")
+
+    # Determine final status
+    if any("too high" in r or "critical" in r for r in reasons):
+        status = "threat"
+    elif reasons:
+        status = "unhealthy"
+
+    return status, reasons
 
 
 def update_metrics():
@@ -96,7 +130,9 @@ def update_metrics():
             "voltage": volt_data,
             "power": power_data
         }
-
+        health_status, reasons = classify_snapshot(snapshot)
+        snapshot["health_status"] = health_status
+        snapshot["reasons"] = reasons
         return snapshot
 
     except Exception as e:
@@ -141,6 +177,10 @@ def background_collector():
                 #     Body=json.dumps(s3_buffer).encode("utf-8"),
                 #     ContentType="application/json"
                 # )
+
+                # TODO: put the s3 path on MongoDb along with the time durations of snapshots, 
+                # add a summary if there is any unhealthy/threat detection in a structured json format
+
                 print(f"Uploaded {filename} with {len(s3_buffer)} entries")
                 
                 s3_buffer = []
