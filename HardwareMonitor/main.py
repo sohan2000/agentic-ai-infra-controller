@@ -7,9 +7,11 @@ import threading, time, json, boto3
 from datetime import datetime
 from botocore.exceptions import BotoCoreError, NoCredentialsError
 from dotenv import load_dotenv
+from pymongo import MongoClient
 
 load_dotenv()
 
+# Setup S3
 s3_buffer = []
 s3_bucket_name = os.getenv("S3_BUCKET_NAME")
 s3_prefix = "telemetry/"
@@ -18,12 +20,21 @@ s3 = boto3.client("s3")
 PROBE_INTERVAL = int(os.getenv("PROBE_INTERVAL",2)) # 2secs
 BATCH_SIZE = int(os.getenv("BATCH_SIZE",10)) # 10 records
 
+# Setup MongoDB
+mongo_uri = os.getenv("MONGO_URI", "mongodb://localhost:27017/")
+mongo_db_name = os.getenv("MONGO_DB_NAME", "bmc_telemetry_db")
+mongo_collection_name = os.getenv("MONGO_COLLECTION_NAME", "s3_telemetry_batches")
+
+mongo_client = MongoClient(mongo_uri)
+mongo_db = mongo_client[mongo_db_name]
+mongo_collection = mongo_db[mongo_collection_name]
+
 app = FastAPI()
 
-LIBRE_HARDWARE_MONITORING_ENDPOINT = "http://localhost:8085/data.json"
+LIBRE_HARDWARE_MONITORING_ENDPOINT = os.getenv("LIBRE_HARDWARE_MONITORING_ENDPOINT")
 
-DEVICE_NAME="ATREYA-SLOWLORI"
-MODULES_TO_MONITOR=["AMD Ryzen 7 5800H with Radeon Graphics"]
+DEVICE_NAME=os.getenv("DEVICE_NAME")
+MODULES_TO_MONITOR=os.getenv("MODULES_TO_MONITOR")
 
 # Define Gauges
 cpu_temp_gauge = Gauge("cpu_temperature_celsius", "CPU Temperature", ["core"])
@@ -34,33 +45,36 @@ cpu_voltage_guage = Gauge("cpu_voltage_volt", "CPU Voltage", ["core"])
 cpu_powers_guage = Gauge("cpu_powers_watt", "CPU Power", ["core"])
 cpu_load_gauge = Gauge("cpu_load_percent", "CPU Load", ["core"])
 
+
 def classify_snapshot(snapshot):
     reasons = []
     status = "healthy"
 
-    temp = snapshot["temperature"].get("Core (Tctl/Tdie)", {}).get("value", 0)
-    cpu_load = snapshot["load"].get("CPU Total", 0)
-    voltage = snapshot["voltage"].get("Core (SVI2 TFN)", 0)
-    power = snapshot["power"].get("Package", 0)
+    #Temperature checks
+    for sensor, data in snapshot.get("temperature", {}).items():
+        temp = data.get("value", 0)
+        if temp > 90:
+            reasons.append(f"Temperature too high on '{sensor}' ({temp}°C > 90°C)")
+        elif temp > 80:
+            reasons.append(f"Temperature elevated on '{sensor}' ({temp}°C > 80°C)")
 
-    # Classification rules
-    if temp > 90:
-        reasons.append(f"Temperature too high ({temp}°C > 90°C)")
-    elif temp > 80:
-        reasons.append(f"Temperature elevated ({temp}°C > 80°C)")
+    #Load checks
+    for sensor, load in snapshot.get("load", {}).items():
+        if load > 80:
+            reasons.append(f"CPU load is high on '{sensor}' ({load}% > 80%)")
 
-    if cpu_load > 80:
-        reasons.append(f"CPU load is high ({cpu_load}% > 80%)")
+    #Voltage checks
+    for sensor, volt in snapshot.get("voltage", {}).items():
+        if volt > 1.6:
+            reasons.append(f"Voltage too high on '{sensor}' ({volt}V > 1.6V)")
 
-    if voltage > 1.6:
-        reasons.append(f"Voltage too high ({voltage}V > 1.6V)")
+    #Power checks
+    for sensor, pwr in snapshot.get("power", {}).items():
+        if pwr > 80:
+            reasons.append(f"Power draw is critical on '{sensor}' ({pwr}W > 80W)")
+        elif pwr > 50:
+            reasons.append(f"Power draw is elevated on '{sensor}' ({pwr}W > 50W)")
 
-    if power > 80:
-        reasons.append(f"Power draw is critical ({power}W > 80W)")
-    elif power > 50:
-        reasons.append(f"Power draw is elevated ({power}W > 50W)")
-
-    # Determine final status
     if any("too high" in r or "critical" in r for r in reasons):
         status = "threat"
     elif reasons:
@@ -152,6 +166,38 @@ def start_background_thread():
 def to_unix_timestamp(ts: str) -> str:
     return str(int(datetime.fromisoformat(ts).timestamp()))
 
+def summarize_batch(buffer, s3_path, start_time, end_time):
+    summary = {
+        "s3_path": s3_path,
+        "start_time": start_time,
+        "end_time": end_time,
+        "total_records": len(buffer),
+        "threat_count": 0,
+        "unhealthy_count": 0,
+        "healthy_count": 0,
+        "reasons": []  # list of {timestamp, reason}
+    }
+
+    for record in buffer:
+        status = record.get("health_status", "healthy")
+        timestamp = record.get("timestamp", "unknown")
+        reasons = record.get("reasons", [])
+
+        if status == "threat":
+            summary["threat_count"] += 1
+        elif status == "unhealthy":
+            summary["unhealthy_count"] += 1
+        else:
+            summary["healthy_count"] += 1
+
+        for reason in reasons:
+            summary["reasons"].append({
+                "timestamp": timestamp,
+                "reason": reason
+            })
+
+    return summary
+
 def background_collector():
     global s3_buffer
     batch_start_time = None
@@ -178,8 +224,14 @@ def background_collector():
                 #     ContentType="application/json"
                 # )
 
-                # TODO: put the s3 path on MongoDb along with the time durations of snapshots, 
-                # add a summary if there is any unhealthy/threat detection in a structured json format
+                # Summarize in MongoDB
+                summary_doc = summarize_batch(
+                    buffer=s3_buffer,
+                    s3_path=filename,
+                    start_time=batch_start_time,
+                    end_time=batch_end_time
+                )
+                mongo_collection.insert_one(summary_doc)
 
                 print(f"Uploaded {filename} with {len(s3_buffer)} entries")
                 

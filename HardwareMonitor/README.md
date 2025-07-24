@@ -33,7 +33,12 @@ Create a `.env` file with the following environment variables. AWS related crede
 |AWS_SECRET_ACCESS_KEY| AWS secret access key | Request for Keys |
 |AWS_DEFAULT_REGION| AWS region | us-east-2 |
 |PROBE_INTERVAL| Probe hardware very `n` seconds | 2 |
-|BATCH_SIZE| Number of records per json file | 10 |
+|DEVICE_NAME| Your device name |  |
+|MODULES_TO_MONITOR| Your CPU name |  |
+|LIBRE_HARDWARE_MONITORING_ENDPOINT| localhost | http://localhost:8085/data.json |
+|MONGO_DB_NAME| your db name | bmc_telemetry_db |
+|MONGO_COLLECTION_NAME| collection name | s3_telemetry_batches |
+|MONGO_URI| Mongo db uri | mongodb://localhost:27017/ |
 
 ### Important Note
 
