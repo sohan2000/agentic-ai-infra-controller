@@ -1,0 +1,6 @@
+fastapi
+uvicorn
+prometheus_client
+requests
+boto3
+dotenv
