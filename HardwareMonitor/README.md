@@ -33,7 +33,8 @@ Create a `.env` file with the following environment variables. AWS related crede
 |AWS_SECRET_ACCESS_KEY| AWS secret access key | Request for Keys |
 |AWS_DEFAULT_REGION| AWS region | us-east-2 |
 |PROBE_INTERVAL| Probe hardware very `n` seconds | 2 |
-|BATCH_SIZE| Number of records per json file | 10 |
+|DEVICE_NAME| Your device name |  |
+|MODULES_TO_MONITOR| Your CPU name |  |
 
 ### Important Note
 
