@@ -31,7 +31,7 @@ mongo_collection = mongo_db[mongo_collection_name]
 
 app = FastAPI()
 
-LIBRE_HARDWARE_MONITORING_ENDPOINT = "http://localhost:8085/data.json"
+LIBRE_HARDWARE_MONITORING_ENDPOINT = os.getenv("LIBRE_HARDWARE_MONITORING_ENDPOINT")
 
 DEVICE_NAME=os.getenv("DEVICE_NAME")
 MODULES_TO_MONITOR=os.getenv("MODULES_TO_MONITOR")
