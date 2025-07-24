@@ -48,3 +48,12 @@ build/
 
 secrets.txt
 secret_commands.txt
+
+# macOS system files
+.DS_Store
+
+# Log files
+*.log
+
+# Node dependencies
+node_modules/
