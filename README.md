@@ -2,14 +2,14 @@
 
 ## Meet The Team: BMC-IS-BOOMING
 
+### **Sohan Vallapureddy**
+[LinkedIn](https://www.linkedin.com/in/vallapureddy-sohan/) | [Website](https://sohanv.com/) | [GitHub](https://github.com/sohan2000)
+
 ### **Aditya Dawadikar**
 [LinkedIn](https://linkedin.com/in/aditya-dawadikar) | [Website](https://portfolio-aditya-dawadikar.vercel.app/) | [GitHub](https://github.com/aditya-dawadikar) | [Medium](https://medium.com/@aditya-dawadikar)
 
 ### **Udayan Atreya**
 [LinkedIn](https://www.linkedin.com/in/uatreya/) | [Website](https://udayan-atreya.netlify.app/) | [GitHub](https://github.com/slowloris-98)
-
-### **Sohan Vallapureddy**
-[LinkedIn](https://www.linkedin.com/in/vallapureddy-sohan/) | [Website](https://sohanv.com/) | [GitHub](https://github.com/sohan2000)
 
 ### **Harshavardhan Valmiki**
 [LinkedIn](https://www.linkedin.com/in/harshavalmiki/) | [GitHub](https://github.com/Harshavalmiki)
