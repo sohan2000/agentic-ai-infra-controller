@@ -10,7 +10,7 @@ const ChartsPanel = () => {
     setDashboard(import.meta.env.VITE_GRAFANA_DASHBOARD)
   }, [])
 
-  console.log(import.meta.env.VITE_GRAFANA_DASHBOARD)
+  // console.log(import.meta.env.VITE_GRAFANA_DASHBOARD)
   return (
     <div>
       <Card variant='outlined'
@@ -18,13 +18,14 @@ const ChartsPanel = () => {
           backgroundColor: 'var(--color-card)',
           color: 'var(--color-text-primary)',
           padding: "1em",
+            height:"50vh"
         }}
       >
         {
           dashboard ? <iframe
             src={dashboard}
             width="100%"
-            height="500"
+            height="100%"
           >
           </iframe> : <></>
         }
